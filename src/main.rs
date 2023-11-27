@@ -1,5 +1,5 @@
 use z3::*;
-use z3::ast::Bool;
+use z3::ast::{Bool,Int};
 use z3::{Config, Context};
 
 fn main() {
@@ -9,16 +9,22 @@ fn main() {
     // Create Z3 solver
     let solver = Solver::new(&context);
     // Create a constant
-    let b = Bool::from_bool(&context,false);
+    let c = Int::from_u64(&context,1);
+    let x = Int::new_const(&context,"x");    
     // Assert it
-    solver.assert(&b);
+    solver.assert(&x.ge(&c));
     // Check it!
     let sr = solver.check();
     // Check it
     let r = match sr {
 	SatResult::Unsat => "UNSAT",
-	SatResult::Sat => "SAT",
-	SatResult::Unknown => "UNKNOWN",	
+	SatResult::Unknown => "UNKNOWN",
+	SatResult::Sat => {
+            let model = solver.get_model().unwrap();
+            let r = model.eval(&x,true).unwrap();
+            println!("x = {r}");
+            "SAT"
+        }
     };
     println!("RESULT: {}",r);
 }
