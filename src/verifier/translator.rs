@@ -18,7 +18,7 @@ impl<'a> Translator<'a> {
 	Self{heap,context}
     }
     
-    pub fn translate_int(&mut self, index: usize) {
+    pub fn translate_int(&mut self, index: usize) -> Int<'a> {
         // Must be valid term
         assert!(index < self.heap.len());
         //
@@ -40,7 +40,7 @@ impl<'a> Translator<'a> {
     // Expressions
     // ===============================================================
 
-    fn translate_int_binary(&mut self, bop: BinOp, lhs: usize, rhs: usize) {
+    fn translate_int_binary(&mut self, bop: BinOp, lhs: usize, rhs: usize) -> Int<'a> {
         let bytecode = match bop {
             // Arithmetic
             BinOp::Add => { todo!() }
@@ -50,7 +50,8 @@ impl<'a> Translator<'a> {
         };
     }
 
-    fn translate_int_var(&mut self, var: &str) {
+    fn translate_int_var(&mut self, var: &str) -> Int<'a> {
+        // This is presumably where we need an environment :)
         todo!()
     }
 
@@ -58,7 +59,8 @@ impl<'a> Translator<'a> {
     // Literals
     // ===============================================================
 
-    fn translate_int_literal(&mut self, val: usize) {
-        todo!()
+    fn translate_int_literal(&mut self, val: usize) -> Int<'a> {
+        // TODO: should fix this cast :)
+        Int::from_u64(self.context,val as u64)
     }
 }
