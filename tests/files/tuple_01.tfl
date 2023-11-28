@@ -1,0 +1,7 @@
+function f((uint,uint) t) -> (uint r) {
+         t.1
+}
+
+function main() {
+         assert f((1,2)) == 2;
+}

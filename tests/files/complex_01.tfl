@@ -1,0 +1,29 @@
+function find(uint[] items, uint item, uint index) -> (uint r) {
+  if index >= |items| {
+     |items|
+  } else {
+    if items[index] == item {
+      index
+    } else {
+      find(items,item,index+1)
+    }
+  }
+}
+
+function length(uint[] items) -> (uint r) {
+   if items == [] {
+     (0+0)
+   } else {
+     length(items[1..|items|]) + 1
+   }
+}
+
+function main() {
+   assert length([]) == 0;
+   assert length([1]) == 1;
+   assert find([1,2,3],1,0) == 0;
+   assert find([1,2,3],2,0) == 1;
+   assert find([1,2,3],3,0) == 2;
+   assert find([1,2,3],0,0) == 3;
+   assert find([1,2,3],4,0) == 3;
+}

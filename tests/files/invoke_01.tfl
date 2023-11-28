@@ -1,0 +1,7 @@
+function id(uint x) -> (uint r) {
+  x
+}
+
+function main() {
+  assert id(1) == 1;
+}
