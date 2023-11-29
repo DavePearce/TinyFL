@@ -5,9 +5,7 @@ use z3::{Context};
 use crate::{BinOp,SyntacticHeap,Term};
 
 /// Responsible for translating terms in the high-level Abstract
-/// Syntax Tree into sequences of low-level bytecodes suitable for the
-/// automated theorem prover.  Such programs are strictly functional,
-/// using only recursion for loops.
+/// Syntax Tree.
 pub struct Translator<'a> {
     heap: &'a SyntacticHeap,
     context: &'a Context        
@@ -34,6 +32,10 @@ impl<'a> Translator<'a> {
 		panic!("unexpected term encountered");
 	    }
         }
+    }
+
+    pub fn translate_bool(&mut self, index: usize) -> Bool<'a> {
+        todo!()
     }
 
     // ===============================================================
