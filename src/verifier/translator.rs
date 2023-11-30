@@ -15,7 +15,11 @@ impl<'a> Translator<'a> {
     pub fn new(heap: &'a SyntacticHeap, context: &'a Context) -> Self {
 	Self{heap,context}
     }
-    
+   
+    // ===============================================================
+    // Integer Expressions
+    // ===============================================================
+
     pub fn translate_int(&mut self, index: usize) -> Int<'a> {
         // Must be valid term
         assert!(index < self.heap.len());
@@ -34,13 +38,6 @@ impl<'a> Translator<'a> {
         }
     }
 
-    pub fn translate_bool(&mut self, index: usize) -> Bool<'a> {
-        todo!()
-    }
-
-    // ===============================================================
-    // Expressions
-    // ===============================================================
 
     fn translate_int_binary(&mut self, bop: BinOp, lhs: usize, rhs: usize) -> Int<'a> {
         let bytecode = match bop {
@@ -57,12 +54,30 @@ impl<'a> Translator<'a> {
         todo!()
     }
 
-    // ===============================================================
-    // Literals
-    // ===============================================================
-
     fn translate_int_literal(&mut self, val: usize) -> Int<'a> {
         // TODO: should fix this cast :)
         Int::from_u64(self.context,val as u64)
+    }
+    
+    // ===============================================================
+    // Logical Expressions
+    // ===============================================================
+    
+    pub fn translate_bool(&mut self, index: usize) -> Bool<'a> {
+        // Must be valid term
+        assert!(index < self.heap.len());
+        //
+        let term = self.heap.get(index);
+        match term {
+            // Literals
+            Term::BoolLiteral(v) => self.translate_bool_literal(*v),
+	    _ => {
+		panic!("unexpected term encountered");
+	    }
+        }
+    }
+
+    fn translate_bool_literal(&mut self, val: bool) -> Bool<'a> {
+        Bool::from_bool(self.context,val)
     }
 }

@@ -94,26 +94,13 @@ impl<'a> VcGenerator<'a> {
     // ===================================================================================
 
     fn generate_decl_function(&mut self, fun: &Function, precondition: Bool<'a>) -> Bool<'a> {
-	// // Following necessary to make sure no bindings retained from
-	// // other functions.
-	// self.env.alloc_fn(&fun.name);
-	// self.env.reset_bindings();	
-	// //
-        // let precondition = self.generate_decl_precondition(fun,precondition);
-	// // Translate function body.
-	// if self.is_recursive(&fun.name,fun.body) {
-	//     self.vcs.push(Bytecode::RecFun(fun.params.len()));
-	// } else {
-	//     self.vcs.push(Bytecode::Fun(fun.params.len()));
-	// }
-	// self.vcs.extend(self.translate(fun.body));	
-        // // Generate verification conditions from body
-        // self.generate_term(fun.body,precondition.clone());
-        // // Generate verification conditions for return types
-	// self.generate_decl_checks(fun,precondition);
-	// //
-	// Vec::new()
-        todo!()
+        let precondition = self.generate_decl_precondition(fun,precondition);
+        // Generate verification conditions from body
+        self.generate_term(fun.body,precondition.clone());
+        // Generate verification conditions for return types
+	self.generate_decl_checks(fun,precondition);
+	//
+        Bool::from_bool(self.context,true)
     }
 
     fn generate_decl_precondition(&mut self, fun: &Function, precondition: Bool<'a>) -> Bool<'a> {
@@ -132,8 +119,7 @@ impl<'a> VcGenerator<'a> {
         //     precondition = self.and(precondition,ith);
         // }	
 	// //
-	// precondition
-        todo!()
+	precondition
     }
 
     fn generate_decl_checks(&mut self, fun: &Function, mut precondition: Bool<'a>) {
@@ -168,7 +154,6 @@ impl<'a> VcGenerator<'a> {
         //     precondition = self.and(precondition,ith.clone());	    
 	//     self.vcs.extend(ith);
         // }
-        todo!()
     }
     
     // ===================================================================================
@@ -192,18 +177,15 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn generate_stmt_assert(&mut self, expr: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-	// // Extract verification conditions from operand	
-        // precondition = self.generate_term(expr,precondition);
-        // // Translate expression
-        // let bytecodes : Vec<Bytecode> = self.translate(expr);
-        // // Emit verification condition for assertion
-	// self.vcs.push(Bytecode::Assert);
-	// self.vcs.push(Bytecode::Implies);	
-	// self.vcs.extend_from_slice(&precondition);
-	// self.vcs.extend(bytecodes);
-	// // TODO: include asserted term?
-	// precondition
-        todo!()
+	// Extract verification conditions from operand
+        precondition = self.generate_term(expr,precondition);
+        // Translate expression
+        let assertion = self.translate_bool(expr);
+        // Emit verification condition (i.e. precondition ==> assertion)
+        let vcg = precondition.implies(&assertion);
+        self.vcgs.push(vcg);
+	// Include assertion as assumption going forward
+	Bool::and(self.context, &[&precondition,&assertion])
     }
 
     // ===================================================================================
@@ -248,8 +230,7 @@ impl<'a> VcGenerator<'a> {
         // // Extract vcs from right-hand side
         // self.generate_term(rhs,tt_precondition);
 	// // FIXME: need to do some merging here!
-	// precondition
-        todo!()
+	precondition
     }
 
     /// For an expression `e1 || e2` it follows (by short circuiting)
@@ -278,24 +259,23 @@ impl<'a> VcGenerator<'a> {
     /// that `e2` is only executed when `e1` is true.  Therefore,
     /// when executing `e2` we can safely assume that `e1` holds.
     fn generate_expr_implies(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // // Extract vcs from left-hand side
-        // precondition = self.generate_term(lhs,precondition);
-        // // Translate left-hand side
-        // let bytecodes : Vec<Bytecode> = self.translate(lhs);
-        // // Update precondition to include the left-hand side.  The
-        // // reason for this is that the right-hand side is only
-        // // executed *when* the left-hand side is true.
-        // let tt_precondition = self.and(precondition.clone(),bytecodes);
-        // // Extract vcs from right-hand side
-        // self.generate_term(rhs,tt_precondition);
-	// // FIXME: need to do some merging here!
-	// precondition
-        todo!()
+        // Extract vcs from left and right-hand sides
+	precondition = self.generate_term(lhs,precondition);
+        // Update precondition to include the left-hand side.  The
+        // reason for this is that the right-hand side is only
+        // executed *when* the left-hand side is true.        
+        let l = self.translate_bool(lhs);        
+        let tt_precondition = Bool::and(self.context, &[&precondition,&l]);
+        //
+        self.generate_term(rhs,tt_precondition);
+	//
+	precondition
     }
 
     /// For an expression `x - y` which produces an unsigned integer,
     /// it follows that `x >= y` must hold.
     fn generate_expr_sub(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
+        // Extract vcs from left and right-hand sides        
 	precondition = self.generate_term(lhs,precondition);
         precondition = self.generate_term(rhs,precondition);
         // Translate left & right-hand sides
