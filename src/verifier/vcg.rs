@@ -36,7 +36,7 @@ pub struct VcGenerator<'a> {
     /// The set of verification conditions.
     vcgs: Vec<Bool<'a>>,
     /// Maps variables from the context
-    env: Environment        
+    env: Environment
 }
 
 impl<'a> VcGenerator<'a> {
@@ -48,7 +48,7 @@ impl<'a> VcGenerator<'a> {
 
     pub fn generate_all(mut self, terms: &[usize]) -> Vec<Bool<'a>> {
         let precondition = Bool::from_bool(self.context,true);
-        for term in terms {	
+        for term in terms {
             self.generate_term(*term, precondition.clone());
 	}
         self.vcgs
@@ -117,13 +117,13 @@ impl<'a> VcGenerator<'a> {
         //     let ith = self.translate(*i);
         //     // Append to list of precondition
         //     precondition = self.and(precondition,ith);
-        // }	
+        // }
 	// //
 	precondition
     }
 
     fn generate_decl_checks(&mut self, fun: &Function, mut precondition: Bool<'a>) {
-	// let len = fun.params.len();	
+	// let len = fun.params.len();
 	// // Determine index of this function
 	// let my_index = self.env.get_fn(&fun.name).unwrap();
 	// // Construct return alias
@@ -137,10 +137,10 @@ impl<'a> VcGenerator<'a> {
 	// for _ in &fun.params {
 	//     // BROKEN: need to consider multiple returns!
 	//     self.vcs.push(Bytecode::Assert);
-	//     self.vcs.push(Bytecode::Implies);	
+	//     self.vcs.push(Bytecode::Implies);
 	//     self.vcs.extend_from_slice(&precondition);
-	//     // BROKEN: need to consider other types	    
-	//     self.vcs.push(Bytecode::IsUint);	    
+	//     // BROKEN: need to consider other types
+	//     self.vcs.push(Bytecode::IsUint);
 	//     self.vcs.extend_from_slice(&alias);
         // }
         // // Generate postcondition checks
@@ -151,11 +151,11 @@ impl<'a> VcGenerator<'a> {
 	//     self.vcs.push(Bytecode::Assert);
 	//     self.vcs.push(Bytecode::Implies);
 	//     self.vcs.extend_from_slice(&precondition);
-        //     precondition = self.and(precondition,ith.clone());	    
+        //     precondition = self.and(precondition,ith.clone());
 	//     self.vcs.extend(ith);
         // }
     }
-    
+
     // ===================================================================================
     // Statements
     // ===================================================================================
@@ -251,8 +251,7 @@ impl<'a> VcGenerator<'a> {
         // // Extract vcs from right-hand side
         // self.generate_term(rhs,tt_precondition);
 	// // FIXME: need to do some merging here!
-	// precondition
-        todo!()
+	precondition
     }
 
     /// For an expression `e1 ==> e2` it follows (by short circuiting)
@@ -263,8 +262,8 @@ impl<'a> VcGenerator<'a> {
 	precondition = self.generate_term(lhs,precondition);
         // Update precondition to include the left-hand side.  The
         // reason for this is that the right-hand side is only
-        // executed *when* the left-hand side is true.        
-        let l = self.translate_bool(lhs);        
+        // executed *when* the left-hand side is true.
+        let l = self.translate_bool(lhs);
         let tt_precondition = Bool::and(self.context, &[&precondition,&l]);
         //
         self.generate_term(rhs,tt_precondition);
@@ -275,7 +274,7 @@ impl<'a> VcGenerator<'a> {
     /// For an expression `x - y` which produces an unsigned integer,
     /// it follows that `x >= y` must hold.
     fn generate_expr_sub(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // Extract vcs from left and right-hand sides        
+        // Extract vcs from left and right-hand sides
 	precondition = self.generate_term(lhs,precondition);
         precondition = self.generate_term(rhs,precondition);
         // Translate left & right-hand sides
@@ -295,10 +294,10 @@ impl<'a> VcGenerator<'a> {
         // // Translate right-hand side
         // let bytecodes : Vec<Bytecode> = self.translate(rhs);
         // // Emit verification condition (i.e. rhs != 0)
-	// self.vcs.push(Bytecode::Assert);	
+	// self.vcs.push(Bytecode::Assert);
 	// self.vcs.push(Bytecode::Implies);
-	// self.vcs.extend_from_slice(&precondition);	
-        // self.vcs.push(Bytecode::Neq);	
+	// self.vcs.extend_from_slice(&precondition);
+        // self.vcs.push(Bytecode::Neq);
         // self.vcs.push(Bytecode::Int(0));
         // self.vcs.extend(bytecodes);
 	// // Done
@@ -313,10 +312,10 @@ impl<'a> VcGenerator<'a> {
         // // Translate right-hand side
         // let bytecodes : Vec<Bytecode> = self.translate(rhs);
         // // Emit verification condition (i.e. rhs != 0)
-	// self.vcs.push(Bytecode::Assert);	
+	// self.vcs.push(Bytecode::Assert);
 	// self.vcs.push(Bytecode::Implies);
-	// self.vcs.extend_from_slice(&precondition);	
-        // self.vcs.push(Bytecode::Neq);	
+	// self.vcs.extend_from_slice(&precondition);
+        // self.vcs.push(Bytecode::Neq);
         // self.vcs.push(Bytecode::Int(0));
         // self.vcs.extend(bytecodes);
 	// // Done
@@ -336,14 +335,14 @@ impl<'a> VcGenerator<'a> {
         // let bytecodes : Vec<Bytecode> = self.translate(cond);
         // // Update precondition to include condition.
         // let mut tt_precondition = precondition.clone();
-        // let mut ff_precondition = precondition.clone();	
+        // let mut ff_precondition = precondition.clone();
         // tt_precondition.insert(0,Bytecode::And);
         // tt_precondition.extend(bytecodes.clone());
         // // Extract vcs from left-hand side
         // tt_precondition = self.generate_term(lhs,tt_precondition);
         // // Repeate for right-hand side
         // ff_precondition.insert(0,Bytecode::And);
-        // ff_precondition.push(Bytecode::Not);	
+        // ff_precondition.push(Bytecode::Not);
         // ff_precondition.extend(bytecodes);
         // // Extract vcs from right-hand side
         // ff_precondition = self.generate_term(rhs,ff_precondition);
@@ -361,7 +360,7 @@ impl<'a> VcGenerator<'a> {
 	// precondition
         todo!()
     }
-    
+
     /// Construct a type test for a given parameter.
     fn type_test(&self, type_index: usize, var_index: usize) -> Bool<'a> {
         // Must be valid term
@@ -370,7 +369,7 @@ impl<'a> VcGenerator<'a> {
         // let term = self.heap.get(type_index);
         // match term {
 	//     Term::BoolType => {
-	// 	vec![Bytecode::IsBool,Bytecode::Var(var_index)]		
+	// 	vec![Bytecode::IsBool,Bytecode::Var(var_index)]
 	//     }
 	//     Term::IntType(false) => {
 	// 	vec![Bytecode::IsUint,Bytecode::Var(var_index)]
@@ -390,5 +389,5 @@ impl<'a> VcGenerator<'a> {
     fn translate_int(&self, term: usize) -> Int<'a> {
         let mut translator = Translator::new(self.heap,self.context);
         translator.translate_int(term)
-    }    
+    }
 }
