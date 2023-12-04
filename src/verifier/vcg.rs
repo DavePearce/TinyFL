@@ -301,8 +301,7 @@ impl<'a> VcGenerator<'a> {
         // self.vcs.push(Bytecode::Int(0));
         // self.vcs.extend(bytecodes);
 	// // Done
-	// precondition
-        todo!()
+	precondition
     }
 
     /// For an expression `x % y`, it follows that `y != 0` must hold.
@@ -319,8 +318,7 @@ impl<'a> VcGenerator<'a> {
         // self.vcs.push(Bytecode::Int(0));
         // self.vcs.extend(bytecodes);
 	// // Done
-	// precondition
-        todo!()
+	precondition
     }
 
     /// For an expression `if e1 { e2 } else { e3 }`, it follows that

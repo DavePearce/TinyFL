@@ -40,13 +40,19 @@ impl<'a> Translator<'a> {
 
 
     fn translate_int_binary(&mut self, bop: BinOp, lhs: usize, rhs: usize) -> Int<'a> {
-        let bytecode = match bop {
+        // Translate lhs and rhs
+        let l = self.translate_int(lhs);
+        let r = self.translate_int(rhs);
+
+        match bop {
             // Arithmetic
-            BinOp::Add => { todo!() }
-            _ => {
-                todo!()
-            }
-        };
+            BinOp::Add => { Int::add(self.context,&[&l,&r]) }
+            BinOp::Subtract => { Int::sub(self.context,&[&l,&r]) }
+            BinOp::Multiply => { Int::mul(self.context,&[&l,&r]) }
+            BinOp::Divide => { l.div(&r) }
+            BinOp::Remainder => { l.rem(&r) }
+            _ => { unreachable!() }
+        }
     }
 
     fn translate_int_var(&mut self, var: &str) -> Int<'a> {
@@ -73,9 +79,7 @@ impl<'a> Translator<'a> {
             Term::Binary(bop,lhs,rhs) => self.translate_bool_binary(*bop,*lhs,*rhs),
             // Literals
             Term::BoolLiteral(v) => self.translate_bool_literal(*v),
-	    _ => {
-		panic!("unexpected term encountered");
-	    }
+	    _ => { unreachable!(); }
         }
     }
 
@@ -96,6 +100,7 @@ impl<'a> Translator<'a> {
         match bop {
             BinOp::LogicalAnd => { Bool::and(self.context,&[&l,&r]) }
             BinOp::LogicalOr => { Bool::or(self.context,&[&l,&r]) }
+            BinOp::LogicalImplies => { l.implies(&r) }
             _ => { unreachable!() }
         }
     }
