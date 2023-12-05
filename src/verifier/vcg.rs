@@ -103,7 +103,7 @@ impl<'a> VcGenerator<'a> {
         Bool::from_bool(self.context,true)
     }
 
-    fn generate_decl_precondition(&mut self, fun: &Function, precondition: Bool<'a>) -> Bool<'a> {
+    fn generate_decl_precondition(&mut self, fun: &Function, mut precondition: Bool<'a>) -> Bool<'a> {
 	//let mut precondition = precondition.to_vec();
         // Second, extract verification conditions from body.
         for ith in &fun.params {
@@ -111,13 +111,13 @@ impl<'a> VcGenerator<'a> {
             //let type_test = self.type_test(ith.0,i);
             //precondition = self.and(precondition,type_test);
         }
-        // // Update precondition to include preconditions
-        // for i in fun.requires.iter() {
-        //     // Translate precondition
-        //     let ith = self.translate(*i);
-        //     // Append to list of precondition
-        //     precondition = self.and(precondition,ith);
-        // }
+        // Update precondition to include preconditions
+        for i in fun.requires.iter() {
+            // Translate precondition
+            let ith = self.translate_bool(*i);
+            // Append to list of precondition
+            precondition = Bool::and(self.context,&[&precondition,&ith]);
+        }
 	// //
 	precondition
     }
