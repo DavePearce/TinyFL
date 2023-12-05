@@ -1,4 +1,4 @@
-use z3::ast::{Bool,Int};
+use z3::ast::{Bool,Dynamic,Int};
 use z3::{Context};
 use crate::{BinOp,Function,SyntacticHeap,Term};
 use super::Environment;
@@ -36,7 +36,7 @@ pub struct VcGenerator<'a> {
     /// The set of verification conditions.
     vcgs: Vec<Bool<'a>>,
     /// Maps variables from the context
-    env: Environment
+    env: Environment<'a>
 }
 
 impl<'a> VcGenerator<'a> {
@@ -104,13 +104,13 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn generate_decl_precondition(&mut self, fun: &Function, precondition: Bool<'a>) -> Bool<'a> {
-	// let mut precondition = precondition.to_vec();
-        // // Second, extract verification conditions from body.
-        // for (i,ith) in fun.params.iter().enumerate() {
-	//     self.env.alloc(&ith.1,i);
-        //     let type_test = self.type_test(ith.0,i);
-        //     precondition = self.and(precondition,type_test);
-        // }
+	//let mut precondition = precondition.to_vec();
+        // Second, extract verification conditions from body.
+        for ith in &fun.params {
+            self.declare(ith.0,&ith.1);
+            //let type_test = self.type_test(ith.0,i);
+            //precondition = self.and(precondition,type_test);
+        }
         // // Update precondition to include preconditions
         // for i in fun.requires.iter() {
         //     // Translate precondition
@@ -380,12 +380,17 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn translate_bool(&self, term: usize) -> Bool<'a> {
-        let mut translator = Translator::new(self.heap,self.context);
+        let mut translator = Translator::new(self.heap,self.context,&self.env);
         translator.translate_bool(term)
     }
 
     fn translate_int(&self, term: usize) -> Int<'a> {
-        let mut translator = Translator::new(self.heap,self.context);
+        let mut translator = Translator::new(self.heap,self.context,&self.env);
         translator.translate_int(term)
+    }
+
+    fn declare(&mut self, var_type: usize, name: &str) {
+        let v = Int::new_const(self.context,name);
+        self.env.alloc(name,Dynamic::from_ast(&v));
     }
 }

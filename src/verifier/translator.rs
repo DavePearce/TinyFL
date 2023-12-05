@@ -2,18 +2,20 @@ use z3::*;
 use z3::ast::{Ast,Bool,Int};
 use z3::{Context};
 
-use crate::{BinOp,SyntacticHeap,Term};
+use crate::{BinOp,Environment,SyntacticHeap,Term};
 
 /// Responsible for translating terms in the high-level Abstract
 /// Syntax Tree.
-pub struct Translator<'a> {
+pub struct Translator<'a, 'b> {
     heap: &'a SyntacticHeap,
-    context: &'a Context
+    context: &'a Context,
+    /// Maps variables from the context
+    env: &'b Environment<'a>
 }
 
-impl<'a> Translator<'a> {
-    pub fn new(heap: &'a SyntacticHeap, context: &'a Context) -> Self {
-	Self{heap,context}
+impl<'a,'b> Translator<'a,'b> {
+    pub fn new(heap: &'a SyntacticHeap, context: &'a Context, env: &'b Environment<'a>) -> Self {
+	Self{heap,context,env}
     }
 
     // ===============================================================
@@ -57,7 +59,7 @@ impl<'a> Translator<'a> {
 
     fn translate_int_var(&mut self, var: &str) -> Int<'a> {
         // This is presumably where we need an environment :)
-        todo!()
+        self.env.lookup(var).as_int().unwrap()
     }
 
     fn translate_int_literal(&mut self, val: usize) -> Int<'a> {
