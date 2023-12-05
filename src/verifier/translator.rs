@@ -58,7 +58,6 @@ impl<'a,'b> Translator<'a,'b> {
     }
 
     fn translate_int_var(&mut self, var: &str) -> Int<'a> {
-        // This is presumably where we need an environment :)
         self.env.lookup(var).as_int().unwrap()
     }
 
@@ -79,6 +78,8 @@ impl<'a,'b> Translator<'a,'b> {
         match term {
             // Expressions
             Term::Binary(bop,lhs,rhs) => self.translate_bool_binary(*bop,*lhs,*rhs),
+            Term::Braced(lhs) => self.translate_bool(*lhs),
+            Term::VarAccess(s) =>  self.translate_bool_var(s),
             // Literals
             Term::BoolLiteral(v) => self.translate_bool_literal(*v),
 	    _ => { unreachable!(); }
@@ -122,6 +123,10 @@ impl<'a,'b> Translator<'a,'b> {
             //
             _ => { unreachable!() }
         }
+    }
+
+    fn translate_bool_var(&mut self, var: &str) -> Bool<'a> {
+        self.env.lookup(var).as_bool().unwrap()
     }
 
     fn translate_bool_literal(&mut self, val: bool) -> Bool<'a> {

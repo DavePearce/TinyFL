@@ -389,8 +389,21 @@ impl<'a> VcGenerator<'a> {
         translator.translate_int(term)
     }
 
-    fn declare(&mut self, var_type: usize, name: &str) {
-        let v = Int::new_const(self.context,name);
-        self.env.alloc(name,Dynamic::from_ast(&v));
+    fn declare(&mut self, type_index: usize, name: &str) {
+        let term = self.heap.get(type_index);
+        let v = match term {
+	    Term::BoolType => {
+                let t = Bool::new_const(self.context,name);
+                Dynamic::from_ast(&t)
+	    }
+	    Term::IntType(false) => {
+                let t = Int::new_const(self.context,name);
+                Dynamic::from_ast(&t)
+	    }
+	    _ => {
+		todo!()
+	    }
+	};
+        self.env.alloc(name,v);
     }
 }
