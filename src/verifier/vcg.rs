@@ -1,4 +1,4 @@
-use z3::ast::{Bool,Dynamic,Int};
+use z3::ast::{Ast,Bool,Dynamic,Int};
 use z3::{Context};
 use crate::{BinOp,Function,SyntacticHeap,Term};
 use super::Environment;
@@ -108,8 +108,6 @@ impl<'a> VcGenerator<'a> {
         // Second, extract verification conditions from body.
         for ith in &fun.params {
             self.declare(ith.0,&ith.1);
-            //let type_test = self.type_test(ith.0,i);
-            //precondition = self.and(precondition,type_test);
         }
         // Update precondition to include preconditions
         for i in fun.requires.iter() {
@@ -289,35 +287,31 @@ impl<'a> VcGenerator<'a> {
 
     /// For an expression `x / y`, it follows that `y != 0` must hold.
     fn generate_expr_div(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-	// precondition = self.generate_term(lhs,precondition);
-        // precondition = self.generate_term(rhs,precondition);
-        // // Translate right-hand side
-        // let bytecodes : Vec<Bytecode> = self.translate(rhs);
-        // // Emit verification condition (i.e. rhs != 0)
-	// self.vcs.push(Bytecode::Assert);
-	// self.vcs.push(Bytecode::Implies);
-	// self.vcs.extend_from_slice(&precondition);
-        // self.vcs.push(Bytecode::Neq);
-        // self.vcs.push(Bytecode::Int(0));
-        // self.vcs.extend(bytecodes);
-	// // Done
+        // Extract vcs from left and right-hand sides
+	precondition = self.generate_term(lhs,precondition);
+        precondition = self.generate_term(rhs,precondition);
+        // Translate left & right-hand sides
+        let r = self.translate_int(rhs);
+        // Emit verification condition (i.e. rhs != 0)
+        let zero = Int::from_u64(self.context,0);
+        let vcg = precondition.implies(&Ast::distinct(self.context,&[&r,&zero]));
+        self.vcgs.push(vcg);
+	// Done
 	precondition
     }
 
     /// For an expression `x % y`, it follows that `y != 0` must hold.
     fn generate_expr_rem(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // precondition = self.generate_term(lhs,precondition);
-        // precondition = self.generate_term(rhs,precondition);
-        // // Translate right-hand side
-        // let bytecodes : Vec<Bytecode> = self.translate(rhs);
-        // // Emit verification condition (i.e. rhs != 0)
-	// self.vcs.push(Bytecode::Assert);
-	// self.vcs.push(Bytecode::Implies);
-	// self.vcs.extend_from_slice(&precondition);
-        // self.vcs.push(Bytecode::Neq);
-        // self.vcs.push(Bytecode::Int(0));
-        // self.vcs.extend(bytecodes);
-	// // Done
+        // Extract vcs from left and right-hand sides
+	precondition = self.generate_term(lhs,precondition);
+        precondition = self.generate_term(rhs,precondition);
+        // Translate left & right-hand sides
+        let r = self.translate_int(rhs);
+        // Emit verification condition (i.e. rhs != 0)
+        let zero = Int::from_u64(self.context,0);
+        let vcg = precondition.implies(&Ast::distinct(self.context,&[&r,&zero]));
+        self.vcgs.push(vcg);
+	// Done
 	precondition
     }
 
@@ -356,26 +350,6 @@ impl<'a> VcGenerator<'a> {
 	// }
 	// // FIXME: generate verification condition from precondition!
 	// precondition
-        todo!()
-    }
-
-    /// Construct a type test for a given parameter.
-    fn type_test(&self, type_index: usize, var_index: usize) -> Bool<'a> {
-        // Must be valid term
-        assert!(type_index < self.heap.len());
-        // //
-        // let term = self.heap.get(type_index);
-        // match term {
-	//     Term::BoolType => {
-	// 	vec![Bytecode::IsBool,Bytecode::Var(var_index)]
-	//     }
-	//     Term::IntType(false) => {
-	// 	vec![Bytecode::IsUint,Bytecode::Var(var_index)]
-	//     }
-	//     _ => {
-	// 	todo!()
-	//     }
-	// }
         todo!()
     }
 
