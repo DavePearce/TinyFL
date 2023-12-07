@@ -1,7 +1,9 @@
 use std::error::Error;
 use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
-use tiny_fl::{Parser,RustPrinter};
+use z3::*;
+//
+use tiny_fl::{Parser,RustPrinter,VcGenerator};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -73,20 +75,46 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
             panic!("failed parsing: {filename}");
         }
     };
+    // Create Z3 Context
+    let cfg = Config::new();
+    let context = Context::new(&cfg);
     // Construct verifier instance
-    // let vcg = VcGenerator::new(&parser.heap);
-    // // Extract verification condition program
-    // let vcp = vcg.generate_all(&terms);
-    // // Run the program
-    // let errors = vcp.check();
-    // for err in errors {
-    //     match err {
-    //         BoundedResult::Ok(_) => {}
-    //         BoundedResult::Err(_) => { panic!("verification failure"); }
-    //         BoundedResult::OutOfResource => { panic!("verification out-of-resource"); }	    
-    //     }
-    // }
-    // //
-    // Ok(true)
-    todo!("Verification needs to be implemented!");
+    let vcg = VcGenerator::new(&parser.heap, &context);
+    // Extract all verification conditions
+    let vcs = vcg.generate_all(&terms);
+    // Create Z3 solver
+    let solver = Solver::new(&context);
+    let checks = vcs.len();
+    let mut errors = 0;
+    let mut warnings = 0;
+    //
+    for vc in vcs {
+        // Assert it
+        solver.assert(&vc.not());
+        // Check it
+        let sr = solver.check();
+        // Check it
+        match sr {
+            SatResult::Unsat => { }
+            SatResult::Unknown => {
+                warnings += 1;
+                println!("Warning");
+            }
+            SatResult::Sat => {
+                // let model = solver.get_model().unwrap();
+                // let r = model.eval(&x,true).unwrap();
+                // println!("x = {r}");
+                println!("Error");
+                errors += 1;
+            }
+        };
+        // Print resource usage
+        if let Some(rc) = solver.get_statistics().value("rlimit count") {
+            println!("Resource Usage: {:?}",rc);
+        }
+    }
+    //
+    println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
+    //
+    Ok(true)
 }

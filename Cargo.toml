@@ -8,4 +8,4 @@ name = "tflc"
 
 [dependencies]
 clap="3.1"
-z3={version="0.11.2", features = ["static-link-z3"]}
+z3={version="0.12", features = ["static-link-z3"]}
