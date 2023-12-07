@@ -35,7 +35,7 @@ impl<'a,'b> Translator<'a,'b> {
             // Literals
             Term::IntLiteral(v) => self.translate_int_literal(*v),
 	    _ => {
-		panic!("unexpected term encountered");
+		panic!("unexpected term encountered {term:?}");
 	    }
         }
     }

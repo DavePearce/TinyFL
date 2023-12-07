@@ -107,7 +107,11 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
                 println!("Error");
                 errors += 1;
             }
-        };        
+        };
+        // Print resource usage
+        if let Some(rc) = solver.get_statistics().value("rlimit count") {
+            println!("Resource Usage: {:?}",rc);
+        }
     }
     //
     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);

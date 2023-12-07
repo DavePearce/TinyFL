@@ -104,7 +104,6 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn generate_decl_precondition(&mut self, fun: &Function, mut precondition: Bool<'a>) -> Bool<'a> {
-	//let mut precondition = precondition.to_vec();
         // Second, extract verification conditions from body.
         for ith in &fun.params {
             self.declare(ith.0,&ith.1);
@@ -121,37 +120,27 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn generate_decl_checks(&mut self, fun: &Function, mut precondition: Bool<'a>) {
-	// let len = fun.params.len();
-	// // Determine index of this function
-	// let my_index = self.env.get_fn(&fun.name).unwrap();
-	// // Construct return alias
-	// let mut alias = vec![Bytecode::Invoke(my_index,len)];
-	// for i in 0..len { alias.push(Bytecode::Var(i)); }
-	// // Load returns into environment as aliases
-	// for (_,n) in &fun.rets {
-	//     self.env.alloc_alias(n,&alias);
-	// }
-	// // Generate return type checks
-	// for _ in &fun.params {
-	//     // BROKEN: need to consider multiple returns!
-	//     self.vcs.push(Bytecode::Assert);
-	//     self.vcs.push(Bytecode::Implies);
-	//     self.vcs.extend_from_slice(&precondition);
-	//     // BROKEN: need to consider other types
-	//     self.vcs.push(Bytecode::IsUint);
-	//     self.vcs.extend_from_slice(&alias);
-        // }
-        // // Generate postcondition checks
-        // for i in fun.ensures.iter() {
-        //     // Translate postcondition
-        //     let ith = self.translate(*i);
-        //     // Emit verification condition
-	//     self.vcs.push(Bytecode::Assert);
-	//     self.vcs.push(Bytecode::Implies);
-	//     self.vcs.extend_from_slice(&precondition);
-        //     precondition = self.and(precondition,ith.clone());
-	//     self.vcs.extend(ith);
-        // }
+	let len = fun.params.len();
+        // Translate function body
+        let body = self.translate(fun.body);
+        let mut precondition = Bool::from_bool(self.context,true);
+        // Allocate return parameters
+        for ith in &fun.rets {
+            self.declare(ith.0,&ith.1);
+            let r = self.env.lookup(&ith.1);
+            // NOTE: the following is completely broken for functions
+            // with multiple returns.  At this stage, I don't know how
+            // best to resolve that.
+            precondition = Bool::and(self.context, &[&precondition, &r._eq(&body)]);
+        }
+        // Generate postcondition checks
+        for i in fun.ensures.iter() {
+            // Translate postcondition
+            let ith = self.translate_bool(*i);
+            // Emit verification condition
+            let vcg = precondition.implies(&ith);
+            self.vcgs.push(vcg);
+        }
     }
 
     // ===================================================================================
@@ -217,17 +206,17 @@ impl<'a> VcGenerator<'a> {
     /// that `e2` is only executed when `e1` is true.  Therefore,
     /// when executing `e2` we can safely assume that `e1` holds.
     fn generate_expr_and(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // // Extract vcs from left-hand side
-        // precondition = self.generate_term(lhs,precondition);
-        // // Translate left-hand side
-        // let bytecodes : Vec<Bytecode> = self.translate(lhs);
-        // // Update precondition to include the left-hand side.  The
-        // // reason for this is that the right-hand side is only
-        // // executed *when* the left-hand side is true.
-	// let tt_precondition = self.and(precondition.clone(),bytecodes);
-        // // Extract vcs from right-hand side
-        // self.generate_term(rhs,tt_precondition);
-	// // FIXME: need to do some merging here!
+        // Extract vcs from left-hand side
+        precondition = self.generate_term(lhs,precondition);
+        // Translate left-hand side
+        let l = self.translate_bool(lhs);
+        // Update precondition to include the left-hand side.  The
+        // reason for this is that the right-hand side is only
+        // executed *when* the left-hand side is true.
+	let tt_precondition = Bool::and(self.context,&[&precondition,&l]);
+        // Extract vcs from right-hand side
+        self.generate_term(rhs,tt_precondition);
+	// FIXME: need to do some merging here!
 	precondition
     }
 
@@ -235,20 +224,17 @@ impl<'a> VcGenerator<'a> {
     /// that `e2` is only executed when `e1` is false.  Therefore,
     /// when executing `e2` we can safely assume that `e1` is false.
     fn generate_expr_or(&mut self, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // // Extract vcs from left-hand side
-        // precondition = self.generate_term(lhs,precondition);
-        // // Translate left-hand side
-        // let bytecodes : Vec<Bytecode> = self.translate(lhs);
-        // // Update precondition to include the (negated) left-hand side.
-        // // The reason for this is that the right-hand side is only
-        // // executed *when* the left-hand side is false.
-	// let mut tt_precondition = precondition.clone();
-	// tt_precondition.insert(0,Bytecode::And);
-        // tt_precondition.push(Bytecode::Not);
-        // tt_precondition.extend(bytecodes);
-        // // Extract vcs from right-hand side
-        // self.generate_term(rhs,tt_precondition);
-	// // FIXME: need to do some merging here!
+        // Extract vcs from left-hand side
+        precondition = self.generate_term(lhs,precondition);
+        // Translate left-hand side
+        let l = self.translate_bool(lhs);
+        // Update precondition to include the (negated) left-hand side.
+        // The reason for this is that the right-hand side is only
+        // executed *when* the left-hand side is false.
+	let mut tt_precondition = Bool::and(self.context,&[&precondition,&l.not()]);
+        // Extract vcs from right-hand side
+        self.generate_term(rhs,tt_precondition);
+	// FIXME: need to do some merging here!
 	precondition
     }
 
@@ -320,27 +306,22 @@ impl<'a> VcGenerator<'a> {
     /// `e3`).  Therefore, when executing `e2` we can safely assume
     /// that `e1` holds (respectively, for `e3` that `e1` does not
     /// hold).
-    fn generate_expr_ifelse(&mut self, cond: usize, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a> {
-        // // Extract vcs from condition
-        // precondition = self.generate_term(cond,precondition);
-        // // Translate condition
-        // let bytecodes : Vec<Bytecode> = self.translate(cond);
-        // // Update precondition to include condition.
-        // let mut tt_precondition = precondition.clone();
-        // let mut ff_precondition = precondition.clone();
-        // tt_precondition.insert(0,Bytecode::And);
-        // tt_precondition.extend(bytecodes.clone());
-        // // Extract vcs from left-hand side
-        // tt_precondition = self.generate_term(lhs,tt_precondition);
-        // // Repeate for right-hand side
-        // ff_precondition.insert(0,Bytecode::And);
-        // ff_precondition.push(Bytecode::Not);
-        // ff_precondition.extend(bytecodes);
-        // // Extract vcs from right-hand side
-        // ff_precondition = self.generate_term(rhs,ff_precondition);
-	// // FIXME: we should try and merge both precondition.
-	// precondition
-        todo!()
+    fn generate_expr_ifelse(&mut self, cond: usize, lhs: usize, rhs: usize, mut precondition: Bool<'a>) -> Bool<'a>
+    {
+        // Extract vcs from condition
+        precondition = self.generate_term(cond,precondition);
+        // Translate condition
+        let c = self.translate_bool(cond);
+        // Update precondition to include condition.
+        let mut tt_precondition = Bool::and(self.context, &[&precondition,&c]);
+        let mut ff_precondition = Bool::and(self.context, &[&precondition,&c.not()]);
+        // Extract vcs from left-hand side
+        tt_precondition = self.generate_term(lhs,tt_precondition);
+        // Repeate for right-hand side
+        // Extract vcs from right-hand side
+        ff_precondition = self.generate_term(rhs,ff_precondition);
+	// FIXME: we should try and merge both precondition.
+	precondition
     }
 
     fn generate_expr_invoke(&mut self, _name: &str, args: &[usize], mut precondition: Bool<'a>) -> Bool<'a> {
@@ -351,6 +332,11 @@ impl<'a> VcGenerator<'a> {
 	// // FIXME: generate verification condition from precondition!
 	// precondition
         todo!()
+    }
+
+    fn translate(&self, term: usize) -> Dynamic<'a> {
+        // FIXME: this is completely broken!
+        Dynamic::from_ast(&self.translate_int(term))
     }
 
     fn translate_bool(&self, term: usize) -> Bool<'a> {
