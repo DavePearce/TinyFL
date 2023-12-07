@@ -28,9 +28,11 @@ impl<'a,'b> Translator<'a,'b> {
         //
         let term = self.heap.get(index);
         match term {
+            Term::Block(stmts) => self.translate_int_block(stmts),
             // Expressions
             Term::Binary(bop,lhs,rhs) => self.translate_int_binary(*bop,*lhs,*rhs),
             Term::Braced(lhs) => self.translate_int(*lhs),
+            Term::IfElse{cond,tt,ff} => self.translate_int_ifelse(*cond,*tt,*ff),
             Term::VarAccess(s) =>  self.translate_int_var(s),
             // Literals
             Term::IntLiteral(v) => self.translate_int_literal(*v),
@@ -40,6 +42,10 @@ impl<'a,'b> Translator<'a,'b> {
         }
     }
 
+    fn translate_int_block(&mut self, indices: &[usize]) -> Int<'a> {
+        assert_eq!(indices.len(),1,"multi-statement blocks not yet supported");
+        self.translate_int(indices[0])
+    }
 
     fn translate_int_binary(&mut self, bop: BinOp, lhs: usize, rhs: usize) -> Int<'a> {
         // Translate lhs and rhs
@@ -55,6 +61,13 @@ impl<'a,'b> Translator<'a,'b> {
             BinOp::Remainder => { l.rem(&r) }
             _ => { unreachable!() }
         }
+    }
+
+    fn translate_int_ifelse(&mut self, cond: usize, lhs: usize, rhs: usize) -> Int<'a> {
+        let c = self.translate_bool(cond);
+        let l = self.translate_int(lhs); // broken (might not be int)
+        let r = self.translate_int(rhs); // broken (might not be int)
+        c.ite(&l,&r)
     }
 
     fn translate_int_var(&mut self, var: &str) -> Int<'a> {
