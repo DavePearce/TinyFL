@@ -115,7 +115,7 @@ impl<'a> VcGenerator<'a> {
             // Append to list of precondition
             precondition = Bool::and(self.context,&[&precondition,&ith]);
         }
-	// //
+        //
 	precondition
     }
 
@@ -123,7 +123,6 @@ impl<'a> VcGenerator<'a> {
 	let len = fun.params.len();
         // Translate function body
         let body = self.translate(fun.body);
-        let mut precondition = Bool::from_bool(self.context,true);
         // Allocate return parameters
         for ith in &fun.rets {
             self.declare(ith.0,&ith.1);

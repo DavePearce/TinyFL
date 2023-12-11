@@ -2,6 +2,7 @@ use std::error::Error;
 use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
 use z3::*;
+use z3::ast::Ast;
 //
 use tiny_fl::{Parser,RustPrinter,VcGenerator};
 
@@ -87,8 +88,13 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
     let checks = vcs.len();
     let mut errors = 0;
     let mut warnings = 0;
+    let mut rusage = 0;
     //
-    for vc in vcs {
+    for mut vc in vcs {
+        //
+        println!("Checking: {vc:?}");
+        vc = vc.simplify();
+        println!("Simplified: {vc:?}");
         // Assert it
         solver.assert(&vc.not());
         // Check it
@@ -109,12 +115,23 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
             }
         };
         // Print resource usage
-        if let Some(rc) = solver.get_statistics().value("rlimit count") {
-            println!("Resource Usage: {:?}",rc);
-        }
+        let cost = determine_cost(&solver,rusage);
+        println!("Resource Usage: +{:?}",cost);
+        rusage += cost;
+        // All done
+        println!("--");
     }
     //
     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
     //
     Ok(true)
+}
+
+fn determine_cost(solver: &Solver, current: usize) -> usize {
+       match solver.get_statistics().value("rlimit count") {
+           Some(StatisticsValue::UInt(v)) => {
+               (v as usize) - current
+           }
+           _ => panic!("Solver doesn't support \"rlimit count\"?")
+       }
 }
