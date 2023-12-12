@@ -1,5 +1,5 @@
 use z3::ast::{Ast,Bool,Dynamic,Int};
-use z3::{Context};
+use z3::{Context,FuncDecl,Sort};
 use crate::{BinOp,Function,SyntacticHeap,Term};
 use super::Environment;
 use super::translator::Translator;
@@ -99,6 +99,11 @@ impl<'a> VcGenerator<'a> {
         self.generate_term(fun.body,precondition.clone());
         // Generate verification conditions for return types
 	self.generate_decl_checks(fun,precondition);
+        // Generate (uninterpreted) function declaration
+        let params = self.translate_param_types(&fun.params);
+        let rets = self.translate_param_types(&fun.rets);
+        let params : Vec<&Sort<'a>> = params.iter().map(|p| p).collect();
+        let fdecl = FuncDecl::new(self.context,fun.name.to_string(),&params,&rets[0]);
 	//
         Bool::from_bool(self.context,true)
     }
@@ -346,6 +351,19 @@ impl<'a> VcGenerator<'a> {
     fn translate_int(&self, term: usize) -> Int<'a> {
         let mut translator = Translator::new(self.heap,self.context,&self.env);
         translator.translate_int(term)
+    }
+
+    fn translate_param_types(&self, terms: &[(usize,String)]) -> Vec<Sort<'a>> {
+        let mut r = Vec::new();
+        for t in terms {
+            r.push(self.translate_type(t.0));
+        }
+        r
+    }
+
+    fn translate_type(&self, term: usize) -> Sort<'a> {
+        let mut translator = Translator::new(self.heap,self.context,&self.env);
+        translator.translate_type(term)
     }
 
     fn declare(&mut self, type_index: usize, name: &str) {

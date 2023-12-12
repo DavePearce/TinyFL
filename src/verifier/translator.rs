@@ -145,4 +145,23 @@ impl<'a,'b> Translator<'a,'b> {
     fn translate_bool_literal(&mut self, val: bool) -> Bool<'a> {
         Bool::from_bool(self.context,val)
     }
+
+    // ===============================================================
+    // Types
+    // ===============================================================
+
+    pub fn translate_type(&mut self, index: usize) -> Sort<'a> {
+        // Must be valid term
+        assert!(index < self.heap.len());
+        //
+        let term = self.heap.get(index);
+        // Types
+        match term {
+            Term::ArrayType(usize) => todo!(),
+            Term::BoolType => Sort::bool(self.context),
+            Term::IntType(_) => Sort::int(self.context),
+            Term::TupleType(_) => todo!(),
+            _ => { unreachable!() }
+        }
+    }
 }
