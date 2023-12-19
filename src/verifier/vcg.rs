@@ -104,6 +104,8 @@ impl<'a> VcGenerator<'a> {
         let rets = self.translate_param_types(&fun.rets);
         let params : Vec<&Sort<'a>> = params.iter().map(|p| p).collect();
         let fdecl = FuncDecl::new(self.context,fun.name.to_string(),&params,&rets[0]);
+        // Allocate function
+        self.env.declare_fn(fdecl);
 	//
         Bool::from_bool(self.context,true)
     }
@@ -329,13 +331,12 @@ impl<'a> VcGenerator<'a> {
     }
 
     fn generate_expr_invoke(&mut self, _name: &str, args: &[usize], mut precondition: Bool<'a>) -> Bool<'a> {
-	// // Generate verification conditions from arguments
-	// for arg in args {
-	//     precondition = self.generate_term(*arg,precondition);
-	// }
-	// // FIXME: generate verification condition from precondition!
-	// precondition
-        todo!()
+	// Generate verification conditions from arguments
+	for arg in args {
+	    precondition = self.generate_term(*arg,precondition);
+	}
+	// FIXME: generate verification condition from precondition!
+	precondition
     }
 
     fn translate(&self, term: usize) -> Dynamic<'a> {

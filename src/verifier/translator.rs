@@ -1,5 +1,5 @@
 use z3::*;
-use z3::ast::{Ast,Bool,Int};
+use z3::ast::{Ast,Bool,Dynamic,Int};
 use z3::{Context};
 
 use crate::{BinOp,Environment,SyntacticHeap,Term};
@@ -33,6 +33,7 @@ impl<'a,'b> Translator<'a,'b> {
             Term::Binary(bop,lhs,rhs) => self.translate_int_binary(*bop,*lhs,*rhs),
             Term::Braced(lhs) => self.translate_int(*lhs),
             Term::IfElse{cond,tt,ff} => self.translate_int_ifelse(*cond,*tt,*ff),
+            Term::StaticInvoke(n,args) => self.translate_int_static_invoke(n,args),
             Term::VarAccess(s) =>  self.translate_int_var(s),
             // Literals
             Term::IntLiteral(v) => self.translate_int_literal(*v),
@@ -70,6 +71,10 @@ impl<'a,'b> Translator<'a,'b> {
         c.ite(&l,&r)
     }
 
+    fn translate_int_static_invoke(&mut self, name: &str, args: &[usize]) -> Int<'a> {
+        self.translate_static_invoke(name,args).as_int().unwrap()
+    }
+
     fn translate_int_var(&mut self, var: &str) -> Int<'a> {
         self.env.lookup(var).as_int().unwrap()
     }
@@ -77,6 +82,21 @@ impl<'a,'b> Translator<'a,'b> {
     fn translate_int_literal(&mut self, val: usize) -> Int<'a> {
         // TODO: should fix this cast :)
         Int::from_u64(self.context,val as u64)
+    }
+
+    fn translate_static_invoke(&mut self, name: &str, args: &[usize]) -> Dynamic<'a> {
+        let fdecl = self.env.lookup_fn(name);
+        let mut dumb = Vec::new();
+        let mut vargs : Vec<&dyn Ast<'_>> = Vec::new();
+        // Yes, this is a tad frustrating.
+        for i in 0..args.len() {
+            // FIXME: following might not be int of course :)
+            dumb.push(self.translate_int(args[i]));
+        }
+        for i in 0..args.len() {
+            vargs.push(&dumb[i]);
+        }
+        fdecl.apply(&vargs)
     }
 
     // ===============================================================
