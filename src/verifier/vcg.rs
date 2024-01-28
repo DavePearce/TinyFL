@@ -1,6 +1,6 @@
 use std::fmt;
 use std::error::Error;
-use crate::circuit::{Circuit,Bool,Int};
+use crate::circuit::{Any,Circuit,Bool,Int};
 use crate::{BinOp,Function,SyntacticHeap,Term};
 use super::Environment;
 use super::translator::Translator;
@@ -64,9 +64,8 @@ pub struct Verifier<'a, C:Circuit> {
 }
 
 impl<'a, C:Circuit> Verifier<'a,C> {
-    pub fn new(heap: &'a SyntacticHeap) -> Self {
+    pub fn new(heap: &'a SyntacticHeap, circuit: C) -> Self {
 	let env = Environment::new();
-        let circuit = C::new();
         Self{heap, env, circuit}
     }
 
@@ -124,60 +123,56 @@ impl<'a, C:Circuit> Verifier<'a,C> {
     // // ===================================================================================
 
     fn generate_decl_function(&mut self, fun: &Function, mut precondition: C::Bool) -> C::Bool {
-        // let precondition = self.generate_decl_precondition(fun,precondition);
+        precondition = self.generate_decl_precondition(fun,precondition);
         // Generate verification conditions from body
         precondition = self.generate_term(fun.body,precondition);
-        // // Generate verification conditions for return types
-        // self.generate_decl_checks(fun,precondition);
-        // // Generate (uninterpreted) function declaration
-        // let params = self.translate_param_types(&fun.params);
-        // let rets = self.translate_param_types(&fun.rets);
-        // let params : Vec<&Sort<'a>> = params.iter().map(|p| p).collect();
-        // let fdecl = FuncDecl::new(self.context,fun.name.to_string(),&params,&rets[0]);
-        // // Allocate function
-        // self.env.declare_fn(fdecl);
+        // Generate verification conditions for return types
+        self.generate_decl_checks(fun,precondition.clone());
+        // Generate (uninterpreted) function declaration
+        let params = self.translate_types(&fun.params);
+        let rets = self.translate_types(&fun.rets);
+        // Declare the function
+        let func = self.circuit.declare_fn(&fun.name,&params,&rets);
+        self.env.declare_fn(func);
         // //
-        // Bool::from_bool(self.context,true)
-        precondition
+        self.circuit.from_bool(true)
     }
 
     fn generate_decl_precondition(&mut self, fun: &Function, mut precondition: C::Bool) -> C::Bool {
-        // // Second, extract verification conditions from body.
-        // for ith in &fun.params {
-        //     self.declare(ith.0,&ith.1);
-        // }
-        // // Update precondition to include preconditions
-        // for i in fun.requires.iter() {
-        //     // Translate precondition
-        //     let ith = self.translate_bool(*i);
-        //     // Append to list of precondition
-        //     precondition = Bool::and(self.context,&[&precondition,&ith]);
-        // }
-        // //
+        // Second, extract verification conditions from body.
+        for ith in &fun.params {
+            self.declare(ith.0,&ith.1);
+        }
+        // Update precondition to include preconditions
+        for i in fun.requires.iter() {
+            // Translate precondition
+            let ith = self.translate_bool(*i);
+            // Append to list of precondition
+            precondition = precondition.and(&ith);
+        }
+        //
         precondition
     }
 
     fn generate_decl_checks(&mut self, fun: &Function, mut precondition: C::Bool) {
-        // let len = fun.params.len();
-        // // Translate function body
-        // let body = self.translate(fun.body);
-        // // Allocate return parameters
-        // for ith in &fun.rets {
-        //     self.declare(ith.0,&ith.1);
-        //     let r = self.env.lookup(&ith.1);
-        //     // NOTE: the following is completely broken for functions
-        //     // with multiple returns.  At this stage, I don't know how
-        //     // best to resolve that.
-        //     precondition = Bool::and(self.context, &[&precondition, &r._eq(&body)]);
-        // }
-        // // Generate postcondition checks
-        // for i in fun.ensures.iter() {
-        //     // Translate postcondition
-        //     let ith = self.translate_bool(*i);
-        //     // Emit verification condition
-        //     let vcg = precondition.implies(&ith);
-        //     self.vcgs.push(vcg);
-        // }
+        // Translate function body
+        let body = self.translate(fun.body);
+        // Allocate return parameters
+        for ith in &fun.rets {
+            self.declare(ith.0,&ith.1);
+            let r = self.env.lookup(&ith.1);
+            // NOTE: the following is completely broken for functions
+            // with multiple returns.  At this stage, I don't know how
+            // best to resolve that.
+            precondition = precondition.and(&r.eq(&body));
+        }
+        // Generate postcondition checks
+        for i in fun.ensures.iter() {
+            // Translate postcondition
+            let ith = self.translate_bool(*i);
+            // Emit verification condition
+            self.circuit.assert(precondition.implies(&ith));
+        }
     }
 
     // ===================================================================================
@@ -380,34 +375,30 @@ impl<'a, C:Circuit> Verifier<'a,C> {
         translator.translate_int(term)
     }
 
-    // fn translate_param_types(&self, terms: &[(usize,String)]) -> Vec<Sort<'a>> {
-    //     let mut r = Vec::new();
-    //     for t in terms {
-    //         r.push(self.translate_type(t.0));
-    //     }
-    //     r
-    // }
+    /// Translate a sequence of zero or more types.
+    fn translate_types(&self, terms: &[(usize,String)]) -> Vec<C::Type> {
+        let mut r = Vec::new();
+        for t in terms {
+            r.push(self.translate_type(t.0));
+        }
+        r
+    }
 
-    // fn translate_type(&self, term: usize) -> Sort<'a> {
-    //     let mut translator = Translator::new(self.heap,self.context,&self.env);
-    //     translator.translate_type(term)
-    // }
+    /// Translate a given type.
+    fn translate_type(&self, term: usize) -> C::Type {
+        let mut translator = Translator::new(self.heap,&self.circuit,&self.env);
+        translator.translate_type(term)
+    }
 
-    // fn declare(&mut self, type_index: usize, name: &str) {
-    //     let term = self.heap.get(type_index);
-    //     let v = match term {
-    //         Term::BoolType => {
-    //             let t = Bool::new_const(self.context,name);
-    //             Dynamic::from_ast(&t)
-    //         }
-    //         Term::IntType(false) => {
-    //             let t = Int::new_const(self.context,name);
-    //             Dynamic::from_ast(&t)
-    //         }
-    //         _ => {
-    //     	todo!()
-    //         }
-    //     };
-    //     self.env.alloc(name,v);
-    // }
+    fn declare(&mut self, type_index: usize, name: &str) {
+        let term = self.heap.get(type_index);
+        let v = match term {
+            Term::BoolType => self.circuit.declare_bool(name).to_any(),
+            Term::IntType(false) => self.circuit.declare_int(name).to_any(),
+            _ => {
+        	todo!()
+            }
+        };
+        self.env.alloc(name,v);
+    }
 }

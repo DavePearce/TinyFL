@@ -1,8 +1,10 @@
 use std::error::Error;
 use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
+use z3::{Context,Config};
 //
-use tiny_fl::{Parser,RustPrinter,SmtLibCircuit,Verifier};
+use tiny_fl::{Parser,RustPrinter,Verifier};
+use tiny_fl::circuit::{Outcome,Z3Circuit};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -75,8 +77,32 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
         }
     };
     // Construct verifier and generate circuit
-    let circuit : SmtLibCircuit = Verifier::new(&parser.heap).to_circuit(&terms)?;
-    // Check stuff?
+    let cfg = Config::new();
+    let context = Context::new(&cfg);
+    let z3 = Z3Circuit::new(&context);
+    let circuit : Z3Circuit = Verifier::new(&parser.heap,z3).to_circuit(&terms)?;
+    let checks = circuit.len();
+    let mut errors = 0;
+    let mut warnings = 0;
+
+    // Check conditions holds
+    for i in 0 .. checks {
+        match circuit.check(i) {
+            Outcome::Valid => { }
+            Outcome::Unknown => {
+                warnings += 1;
+                println!("Warning");
+            }
+            Outcome::Invalid => {
+                // let model = solver.get_model().unwrap();
+                // let r = model.eval(&x,true).unwrap();
+                // println!("x = {r}");
+                println!("Error");
+                errors += 1;
+            }
+        }
+    }
+    println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
     Ok(true)
 }
 

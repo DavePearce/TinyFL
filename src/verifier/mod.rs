@@ -2,7 +2,7 @@ mod vcg;
 mod translator;
 
 use std::collections::{HashMap};
-use crate::circuit::Circuit;
+use crate::circuit::{Circuit,Function};
 pub use vcg::*;
 
 
@@ -24,8 +24,7 @@ impl<C:Circuit> Environment<C> {
         self.bindings.get(name).unwrap()
     }
     pub fn declare_fn(&mut self, decl: C::Function) {
-        //self.fn_bindings.insert(decl.name(), decl);
-        todo!()
+        self.fn_bindings.insert(decl.name(), decl);
     }
     pub fn lookup_fn(&self, name: &str) -> &C::Function {
         self.fn_bindings.get(name).unwrap()
