@@ -1,10 +1,10 @@
 use std::error::Error;
 use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
-use z3::*;
-use z3::ast::Ast;
+use z3::{Context,Config};
 //
-use tiny_fl::{Parser,RustPrinter,VcGenerator};
+use tiny_fl::{Parser,RustPrinter,Verifier};
+use tiny_fl::circuit::{Outcome,Z3Circuit};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -76,62 +76,105 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
             panic!("failed parsing: {filename}");
         }
     };
-    // Create Z3 Context
+    // Construct verifier and generate circuit
     let cfg = Config::new();
     let context = Context::new(&cfg);
-    // Construct verifier instance
-    let vcg = VcGenerator::new(&parser.heap, &context);
-    // Extract all verification conditions
-    let vcs = vcg.generate_all(&terms);
-    // Create Z3 solver
-    let solver = Solver::new(&context);
-    let checks = vcs.len();
+    let z3 = Z3Circuit::new(&context);
+    let circuit : Z3Circuit = Verifier::new(&parser.heap,z3).to_circuit(&terms)?;
+    let checks = circuit.len();
     let mut errors = 0;
     let mut warnings = 0;
-    let mut rusage = 0;
-    //
-    for mut vc in vcs {
-        //
-        println!("Checking: {vc:?}");
-        vc = vc.simplify();
-        println!("Simplified: {vc:?}");
-        // Assert it
-        solver.assert(&vc.not());
-        // Check it
-        let sr = solver.check();
-        // Check it
-        match sr {
-            SatResult::Unsat => { }
-            SatResult::Unknown => {
+
+    // Check conditions holds
+    for i in 0 .. checks {
+        match circuit.check(i) {
+            Outcome::Valid => { }
+            Outcome::Unknown => {
                 warnings += 1;
                 println!("Warning");
             }
-            SatResult::Sat => {
+            Outcome::Invalid => {
                 // let model = solver.get_model().unwrap();
                 // let r = model.eval(&x,true).unwrap();
                 // println!("x = {r}");
                 println!("Error");
                 errors += 1;
             }
-        };
-        // Print resource usage
-        let cost = determine_cost(&solver,rusage);
-        println!("Resource Usage: +{:?}",cost);
-        rusage += cost;
-        // All done
-        println!("--");
+        }
     }
-    //
     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
-    //
     Ok(true)
 }
 
-fn determine_cost(solver: &Solver, current: usize) -> usize {
-       match solver.get_statistics().value("rlimit count") {
-           Some(StatisticsValue::UInt(v)) => {
-               (v as usize) - current
-           }
-           _ => panic!("Solver doesn't support \"rlimit count\"?")
-       }
-}
+// fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
+//     // Extract the file to be compiled.
+//     let filename = args.get_one::<String>("file").unwrap();
+//     // Read file
+//     let contents = fs::read_to_string(filename)?;
+//     let mut parser = Parser::new(&contents);
+//     // Parse input
+//     let terms = match parser.parse() {
+//         Ok(terms) => terms,
+//         Err(_) => {
+//             panic!("failed parsing: {filename}");
+//         }
+//     };
+//     // Create Z3 Context
+//     let cfg = Config::new();
+//     let context = Context::new(&cfg);
+//     // Construct verifier instance
+//     let vcg = VcGenerator::new(&parser.heap);
+//     // Extract all verification conditions
+//     let vcs = vcg.generate_all(&terms);
+//     // Create Z3 solver
+//     let solver = Solver::new(&context);
+//     let checks = vcs.len();
+//     let mut errors = 0;
+//     let mut warnings = 0;
+//     let mut rusage = 0;
+//     //
+//     for mut vc in vcs {
+//         //
+//         println!("Checking: {vc:?}");
+//         vc = vc.simplify();
+//         println!("Simplified: {vc:?}");
+//         // Assert it
+//         solver.assert(&vc.not());
+//         // Check it
+//         let sr = solver.check();
+//         // Check it
+//         match sr {
+//             SatResult::Unsat => { }
+//             SatResult::Unknown => {
+//                 warnings += 1;
+//                 println!("Warning");
+//             }
+//             SatResult::Sat => {
+//                 // let model = solver.get_model().unwrap();
+//                 // let r = model.eval(&x,true).unwrap();
+//                 // println!("x = {r}");
+//                 println!("Error");
+//                 errors += 1;
+//             }
+//         };
+//         // Print resource usage
+//         let cost = determine_cost(&solver,rusage);
+//         println!("Resource Usage: +{:?}",cost);
+//         rusage += cost;
+//         // All done
+//         println!("--");
+//     }
+//     //
+//     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
+//     //
+//     Ok(true)
+// }
+
+// fn determine_cost(solver: &Solver, current: usize) -> usize {
+//        match solver.get_statistics().value("rlimit count") {
+//            Some(StatisticsValue::UInt(v)) => {
+//                (v as usize) - current
+//            }
+//            _ => panic!("Solver doesn't support \"rlimit count\"?")
+//        }
+// }

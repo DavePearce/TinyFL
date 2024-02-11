@@ -314,7 +314,7 @@ impl Lexer {
     pub fn expect(&mut self, kind: TokenType) -> Token {
         let tok = self.lookahead(0);
         if tok.kind != kind {
-            panic!("unexpected token encountered {tok:?}");
+            panic!("expected {kind:?} found {tok:?}");
         }
         self.accept(&tok);
         tok

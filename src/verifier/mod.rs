@@ -2,32 +2,31 @@ mod vcg;
 mod translator;
 
 use std::collections::{HashMap};
-use z3::ast::{Dynamic};
-use z3::{FuncDecl};
+use crate::circuit::{Circuit,Function};
 pub use vcg::*;
 
 
-pub struct Environment<'a> {
+pub struct Environment<C:Circuit> {
     /// Map local variables.
-    bindings: HashMap<String,Dynamic<'a>>,
+    bindings: HashMap<String, C::Term>,
     /// Bind function names to declarations.
-    fn_bindings: HashMap<String, FuncDecl<'a>>,
+    fn_bindings: HashMap<String, C::Function>,
 }
 
-impl<'a> Environment<'a> {
+impl<C:Circuit> Environment<C> {
     pub fn new() -> Self {
         Self{bindings: HashMap::new(), fn_bindings: HashMap::new() }
     }
-    pub fn alloc(&mut self, name: &str, kind: Dynamic<'a>) {
+    pub fn alloc(&mut self, name: &str, kind: C::Term) {
         self.bindings.insert(name.to_string(), kind);
     }
-    pub fn lookup(&self, name: &str) -> &Dynamic<'a> {
+    pub fn lookup(&self, name: &str) -> &C::Term {
         self.bindings.get(name).unwrap()
     }
-    pub fn declare_fn(&mut self, decl: FuncDecl<'a>) {
+    pub fn declare_fn(&mut self, decl: C::Function) {
         self.fn_bindings.insert(decl.name(), decl);
     }
-    pub fn lookup_fn(&self, name: &str) -> &FuncDecl<'a> {
+    pub fn lookup_fn(&self, name: &str) -> &C::Function {
         self.fn_bindings.get(name).unwrap()
     }
 }

@@ -3,6 +3,7 @@ mod codegen;
 mod lexer;
 mod parser;
 mod verifier;
+pub mod circuit;
 
 pub use ast::*;
 pub use codegen::*;
