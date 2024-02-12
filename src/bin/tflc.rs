@@ -1,10 +1,9 @@
 use std::error::Error;
 use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
-use z3::{Context,Config};
 //
 use tiny_fl::{Parser,RustPrinter,SyntacticHeap,Verifier};
-use tiny_fl::circuit::{Circuit,Outcome,SmtLibCircuit,Z3Circuit};
+use tiny_fl::circuit::{Circuit,Outcome,SmtLibCircuit};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -22,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .subcommand(
             Command::new("verify")
                 .about("Verify a given source file")
-                .arg(Arg::new("smtlib").long("smtlib"))
+                .arg(Arg::new("z3-static").long("z3-static"))
                 .arg(Arg::new("file").required(true))
                 .visible_alias("v")
         )
@@ -67,7 +66,8 @@ fn compile(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
 fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
     // Extract the file to be compiled.
     let filename = args.get_one::<String>("file").unwrap();
-    let smtlib = args.contains_id("smtlib");
+    // Check whether to use Z3 directly
+    let z3_static = args.contains_id("z3-static");
     // Read file
     let contents = fs::read_to_string(filename)?;
     let mut parser = Parser::new(&contents);
@@ -79,14 +79,12 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
         }
     };
     // Construct verifier and generate circuit
-    if smtlib {
+    if z3_static {
+        // Z3 has been statically linked.
+        z3_check(&parser.heap,&terms)
+    } else {
         let smtlib = SmtLibCircuit::new();
         check(&parser.heap,&terms,smtlib)
-    } else {
-        let cfg = Config::new();
-        let context = Context::new(&cfg);
-        let z3 = Z3Circuit::new(&context);
-        check(&parser.heap,&terms,z3)
     }
 }
 
@@ -117,6 +115,23 @@ fn check<C:Circuit>(heap: &SyntacticHeap, terms: &[usize], circuit: C) -> Result
     }
     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
     Ok(true)
+}
+
+// ===================================================================
+// Static Z3 Feature
+// ===================================================================
+
+#[cfg(feature="z3-static")]
+fn z3_check(heap: &SyntacticHeap, terms: &[usize]) -> Result<bool, Box<dyn Error>> {
+    let cfg = z3::Config::new();
+    let context = z3::Context::new(&cfg);
+    let z3 = tiny_fl::circuit::Z3Circuit::new(&context);
+    check(heap,&terms,z3)
+}
+
+#[cfg(not(feature="z3-static"))]
+fn z3_check(heap: &SyntacticHeap, terms: &[usize]) -> Result<bool, Box<dyn Error>> {
+    panic!("Z3 was not statically linked!")
 }
 
 // fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {

@@ -1,7 +1,10 @@
 mod smtlib;
-mod z3;
 
 pub use smtlib::*;
+
+#[cfg(feature="z3-static")]
+mod z3;
+#[cfg(feature="z3-static")]
 pub use z3::*;
 
 pub enum Outcome {

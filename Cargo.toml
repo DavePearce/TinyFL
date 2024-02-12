@@ -3,9 +3,12 @@ name = "tiny_fl"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+z3-static=[ "z3" ]
+
 [[bin]]
 name = "tflc"
 
 [dependencies]
 clap="3.1"
-z3={version="0.12", features = ["static-link-z3"]}
+z3={version="0.12", features=["static-link-z3"], optional=true}
