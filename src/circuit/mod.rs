@@ -1,5 +1,10 @@
-mod z3;
+mod smtlib;
 
+pub use smtlib::*;
+
+#[cfg(feature="z3-static")]
+mod z3;
+#[cfg(feature="z3-static")]
 pub use z3::*;
 
 pub enum Outcome {
@@ -24,13 +29,13 @@ pub trait Circuit {
     type Function : Function<Any=Self::Term>;
 
     /// Declare a boolean variable
-    fn declare_bool(&self, name: &str) -> Self::Bool;
+    fn declare_bool(&mut self, name: &str) -> Self::Bool;
 
     /// Declare an integer variable
-    fn declare_int(&self, name: &str) -> Self::Int;
+    fn declare_int(&mut self, name: &str) -> Self::Int;
 
     /// Declare an (uninterpreted) function.
-    fn declare_fn(&self, name: &str, params: &[Self::Type], returns: &[Self::Type]) -> Self::Function;
+    fn declare_fn(&mut self, name: &str, params: &[Self::Type], returns: &[Self::Type]) -> Self::Function;
 
     /// Construct a boolean term from a boolean value.
     fn from_bool(&self, val: bool) -> Self::Bool;
@@ -49,6 +54,8 @@ pub trait Circuit {
     /// places a constraint on the circuit that the given condition
     /// holds.
     fn assert(&mut self, condition: Self::Bool);
+
+    fn check(&self) -> Vec<Outcome>;
 }
 
 pub trait Any : Clone {

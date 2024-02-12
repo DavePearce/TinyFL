@@ -84,6 +84,14 @@ impl<'a> Circuit for Z3Circuit<'a> {
     fn assert(&mut self, condition: Self::Bool) {
         Z3Circuit::discharge(self,condition);
     }
+
+    fn check(&self) -> Vec<Outcome> {
+        let mut outcomes = Vec::new();
+        for i in 0..self.conditions.len() {
+            outcomes.push(self.check(i));
+        }
+        outcomes
+    }
 }
 
 // =============================================================================
