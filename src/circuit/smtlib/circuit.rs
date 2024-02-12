@@ -1,7 +1,10 @@
-use std::io;
 use crate::circuit;
 use super::SmtLibWriter;
 use super::ast::*;
+use super::solver::SmtOutcome;
+
+use super::ast::NaryOp::*;
+use super::ast::UnaryOp::*;
 
 // =============================================================================
 // SmtLib Circuit
@@ -18,7 +21,8 @@ impl SmtLibCircuit {
     }
 
     pub fn discharge(&mut self, condition: Expr) {
-        self.commands.push(Command::Assert(condition));
+        let r = <Expr as circuit::Bool>::not(&condition);
+        self.commands.push(Command::Assert(r));
     }
 }
 
@@ -62,9 +66,15 @@ impl circuit::Circuit for SmtLibCircuit {
     }
 
     fn check(&self) -> Vec<circuit::Outcome> {
-        let mut writer = SmtLibWriter::new(io::stdout());
-        writer.write(&self.commands);
-        vec![]
+        let results = super::smtsolver_exec(&self.commands);
+        //
+        results.iter().map(|o| {
+            match o {
+                SmtOutcome::Sat => circuit::Outcome::Invalid,
+                SmtOutcome::Unsat => circuit::Outcome::Valid,
+                _ => circuit::Outcome::Unknown
+            }
+        }).collect()
     }
 }
 
@@ -75,11 +85,11 @@ impl<'a> circuit::Any for Expr {
     type Bool = Expr;
 
     fn eq(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::Eq,vec![self.clone(),other.clone()])
+        Expr::Nary(Eq,vec![self.clone(),other.clone()])
     }
 
     fn neq(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::Neq,vec![self.clone(),other.clone()])
+        Expr::Nary(Neq,vec![self.clone(),other.clone()])
     }
 }
 
@@ -96,16 +106,16 @@ impl<'a> circuit::Bool for Expr {
         self.clone()
     }
     fn not(&self) -> Self {
-        todo!()
+        Expr::Unary(Not,Box::new(self.clone()))
     }
     fn and(&self, other: &Self) -> Self {
-        Expr::Nary(Op::And,vec![self.clone(),other.clone()])
+        Expr::Nary(And,vec![self.clone(),other.clone()])
     }
     fn or(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Or,vec![self.clone(),other.clone()])
+        Expr::Nary(Or,vec![self.clone(),other.clone()])
     }
     fn implies(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Implies,vec![self.clone(),other.clone()])
+        Expr::Nary(Implies,vec![self.clone(),other.clone()])
     }
     fn ite(&self, lhs: &Self::Any, rhs: &Self::Any) -> Self::Any {
         todo!()
@@ -130,30 +140,30 @@ impl circuit::Int for Expr {
     // Comparators
     fn non_zero(&self) -> Self::Bool { todo!() }
     fn lt(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::Lt,vec![self.clone(),other.clone()])
+        Expr::Nary(Lt,vec![self.clone(),other.clone()])
     }
     fn lteq(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::LtEq,vec![self.clone(),other.clone()])
+        Expr::Nary(LtEq,vec![self.clone(),other.clone()])
     }
     fn gt(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::Gt,vec![self.clone(),other.clone()])
+        Expr::Nary(Gt,vec![self.clone(),other.clone()])
     }
     fn gteq(&self, other: &Self) -> Self::Bool {
-        Expr::Nary(Op::GtEq,vec![self.clone(),other.clone()])
+        Expr::Nary(GtEq,vec![self.clone(),other.clone()])
     }
-    // Arithmetic Operators
+    // Arithmetic NaryOperators
     fn neg(&self) -> Self { todo!() }
     fn add(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Add,vec![self.clone(),other.clone()])
+        Expr::Nary(Add,vec![self.clone(),other.clone()])
     }
     fn sub(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Sub,vec![self.clone(),other.clone()])
+        Expr::Nary(Sub,vec![self.clone(),other.clone()])
     }
     fn div(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Div,vec![self.clone(),other.clone()])
+        Expr::Nary(Div,vec![self.clone(),other.clone()])
     }
     fn mul(&self, other: &Self) -> Self {
-        Expr::Nary(Op::Mul,vec![self.clone(),other.clone()])
+        Expr::Nary(Mul,vec![self.clone(),other.clone()])
     }
     fn rem(&self, other: &Self) -> Self {
         todo!()

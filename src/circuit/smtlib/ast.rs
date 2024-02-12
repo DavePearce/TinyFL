@@ -1,6 +1,6 @@
 /// Set of built-in operators
 #[derive(Clone,Copy,Debug,PartialEq)]
-pub enum Op {
+pub enum NaryOp {
     Eq,
     Neq,
     // Arithmetical
@@ -19,22 +19,35 @@ pub enum Op {
     Implies
 }
 
-impl Op {
+impl NaryOp {
     pub fn as_str(&self) -> &str {
         match self {
-            Op::Eq => "=",
-            Op::Neq => "!=",
-            Op::Add => "+",
-            Op::Sub => "-",
-            Op::Mul => "*",
-            Op::Div => "/",
-            Op::Gt => ">",
-            Op::GtEq => ">=",
-            Op::Lt => ">",
-            Op::LtEq => "<=",
-            Op::Or => "or",
-            Op::And => "and",
-            Op::Implies => "=>"
+            NaryOp::Eq => "=",
+            NaryOp::Neq => "!=",
+            NaryOp::Add => "+",
+            NaryOp::Sub => "-",
+            NaryOp::Mul => "*",
+            NaryOp::Div => "/",
+            NaryOp::Gt => ">",
+            NaryOp::GtEq => ">=",
+            NaryOp::Lt => "<",
+            NaryOp::LtEq => "<=",
+            NaryOp::Or => "or",
+            NaryOp::And => "and",
+            NaryOp::Implies => "=>"
+        }
+    }
+}
+
+#[derive(Clone,Copy,Debug,PartialEq)]
+pub enum UnaryOp {
+    Not
+}
+
+impl UnaryOp {
+    pub fn as_str(&self) -> &str {
+        match self {
+            UnaryOp::Not => "not",
         }
     }
 }
@@ -46,7 +59,9 @@ pub enum Expr {
     /// Boolean Literal
     Boolean(bool),
     /// Nary Expression
-    Nary(Op,Vec<Expr>),
+    Nary(NaryOp,Vec<Expr>),
+    /// Unary Expression
+    Unary(UnaryOp,Box<Expr>),
     /// Variable Access
     VarAccess(String)
 }
