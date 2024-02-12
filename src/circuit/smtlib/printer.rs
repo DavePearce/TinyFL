@@ -22,8 +22,23 @@ impl<T:Write> SmtLibWriter<T> {
     fn write_command(&mut self, cmd: &Command) -> Result<()> {
         match cmd {
             Command::Assert(expr) => self.write_assert(expr),
+            Command::DeclareVar(name,typ) => self.write_declarevar(name,typ),
+            Command::DeclareFun(name,params,ret) => self.write_declarefun(name,params,ret),
             Command::CheckSat => self.write_checksat()
         }
+    }
+
+    fn write_declarevar(&mut self, name: &str, typ: &Sort) -> Result<()> {
+        writeln!(self.out,"(declare-var {name} {typ:?})")
+    }
+
+    fn write_declarefun(&mut self, name: &str, params: &[Sort], ret: &Sort) -> Result<()> {
+        write!(self.out,"(declare-fun {name} (")?;
+        for i in 0..params.len() {
+            if i != 0 { write!(self.out,",")?; }
+            write!(self.out,"{:?}",params[i])?;
+        }
+        writeln!(self.out,") {ret:?})")
     }
 
     fn write_checksat(&mut self) -> Result<()> {

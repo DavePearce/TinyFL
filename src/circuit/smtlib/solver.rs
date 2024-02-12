@@ -16,7 +16,7 @@ pub fn smtsolver_exec(commands: &[ast::Command]) -> Vec<SmtOutcome> {
     let bytes = SmtLibWriter::new(Vec::new()).write(commands).unwrap();
     let smt = String::from_utf8(bytes).unwrap();
     // Pipe to Child
-    let mut child = Command::new("/home/djp/pkg/z3-4.12.2/bin/z3")
+    let mut child = Command::new("z3")
         .args(&["--smt2","--in"])
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
@@ -25,7 +25,7 @@ pub fn smtsolver_exec(commands: &[ast::Command]) -> Vec<SmtOutcome> {
     // Grab the stdin handle.
     let mut stdin = child.stdin.take().unwrap();
     std::thread::spawn(move || {
-        println!("CHECKING: {smt}");
+        println!("{smt}");
         stdin.write_all(smt.as_bytes()).expect("Failed to write to stdin");
         stdin.write_all(b"(check-sat)").expect("Failed to write to stdin");
     });

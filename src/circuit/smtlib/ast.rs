@@ -8,6 +8,7 @@ pub enum NaryOp {
     Sub,
     Mul,
     Div,
+    Mod,
     // Relational
     Gt,
     GtEq,
@@ -27,7 +28,8 @@ impl NaryOp {
             NaryOp::Add => "+",
             NaryOp::Sub => "-",
             NaryOp::Mul => "*",
-            NaryOp::Div => "/",
+            NaryOp::Div => "div",
+            NaryOp::Mod => "mod",
             NaryOp::Gt => ">",
             NaryOp::GtEq => ">=",
             NaryOp::Lt => "<",
@@ -73,6 +75,8 @@ pub enum Sort {
 }
 
 pub enum Command {
+    DeclareFun(String,Vec<Sort>,Sort),
+    DeclareVar(String,Sort),
     Assert(Expr),
     CheckSat
 }

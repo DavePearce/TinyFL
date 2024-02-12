@@ -41,15 +41,20 @@ impl circuit::Circuit for SmtLibCircuit {
         Expr::Integer(val)
     }
 
-    fn declare_bool(&self, name: &str) -> Self::Bool {
+    fn declare_bool(&mut self, name: &str) -> Self::Bool {
+        self.commands.push(Command::DeclareVar(name.to_string(),Sort::Bool));
 	Expr::VarAccess(name.to_string())
     }
 
-    fn declare_int(&self, name: &str) -> Self::Int {
+    fn declare_int(&mut self, name: &str) -> Self::Int {
+        self.commands.push(Command::DeclareVar(name.to_string(),Sort::Int));
 	Expr::VarAccess(name.to_string())
     }
 
-    fn declare_fn(&self, name: &str, params: &[Self::Type], rets: &[Self::Type]) -> Self::Function {
+    fn declare_fn(&mut self, name: &str, params: &[Self::Type], rets: &[Self::Type]) -> Self::Function {
+        // For now
+        assert_eq!(rets.len(),1);
+        self.commands.push(Command::DeclareFun(name.to_string(),params.to_vec(),rets[0].clone()));
         Function{name: name.to_string(),arity:params.len()}
     }
 
@@ -152,7 +157,7 @@ impl circuit::Int for Expr {
         Expr::Nary(GtEq,vec![self.clone(),other.clone()])
     }
     // Arithmetic NaryOperators
-    fn neg(&self) -> Self { todo!() }
+    fn neg(&self) -> Self { Expr::Nary(Sub,vec![self.clone()]) }
     fn add(&self, other: &Self) -> Self {
         Expr::Nary(Add,vec![self.clone(),other.clone()])
     }
@@ -166,7 +171,7 @@ impl circuit::Int for Expr {
         Expr::Nary(Mul,vec![self.clone(),other.clone()])
     }
     fn rem(&self, other: &Self) -> Self {
-        todo!()
+        Expr::Nary(Mod,vec![self.clone(),other.clone()])
     }
 }
 
