@@ -30,6 +30,7 @@ impl<'a, C:Circuit> Translator<'a,C> {
         //
         let term = self.heap.get(index);
         match term {
+            Term::Assert(e) => self.translate_assert(*e),
             Term::Block(stmts) => self.translate_block(stmts),
             // // Expressions
             Term::Binary(bop,lhs,rhs) => self.translate_binary(*bop,*lhs,*rhs),
@@ -44,6 +45,12 @@ impl<'a, C:Circuit> Translator<'a,C> {
 	        panic!("unexpected term encountered {term:?}");
 	    }
         }
+    }
+
+
+    pub fn translate_assert(&mut self, index: usize) -> C::Term {
+        // Should be a unit term I think?
+        self.context.from_bool(false).to_any()
     }
 
     /// Translate the term at a given `index` position within the heap

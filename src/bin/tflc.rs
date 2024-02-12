@@ -3,8 +3,8 @@ use std::{fs};
 use clap::{arg, Arg, ArgMatches, Command};
 use z3::{Context,Config};
 //
-use tiny_fl::{Parser,RustPrinter,Verifier};
-use tiny_fl::circuit::{Outcome,Z3Circuit};
+use tiny_fl::{Parser,RustPrinter,SyntacticHeap,Verifier};
+use tiny_fl::circuit::{Circuit,Outcome,SmtLibCircuit,Z3Circuit};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .subcommand(
             Command::new("verify")
                 .about("Verify a given source file")
+                .arg(Arg::new("smtlib").long("smtlib"))
                 .arg(Arg::new("file").required(true))
                 .visible_alias("v")
         )
@@ -66,6 +67,7 @@ fn compile(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
 fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
     // Extract the file to be compiled.
     let filename = args.get_one::<String>("file").unwrap();
+    let smtlib = args.contains_id("smtlib");
     // Read file
     let contents = fs::read_to_string(filename)?;
     let mut parser = Parser::new(&contents);
@@ -77,17 +79,27 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
         }
     };
     // Construct verifier and generate circuit
-    let cfg = Config::new();
-    let context = Context::new(&cfg);
-    let z3 = Z3Circuit::new(&context);
-    let circuit : Z3Circuit = Verifier::new(&parser.heap,z3).to_circuit(&terms)?;
-    let checks = circuit.len();
+    if smtlib {
+        let smtlib = SmtLibCircuit::new();
+        check(&parser.heap,&terms,smtlib)
+    } else {
+        let cfg = Config::new();
+        let context = Context::new(&cfg);
+        let z3 = Z3Circuit::new(&context);
+        check(&parser.heap,&terms,z3)
+    }
+}
+
+fn check<C:Circuit>(heap: &SyntacticHeap, terms: &[usize], circuit: C) -> Result<bool, Box<dyn Error>> {
+    //
+    let circuit = Verifier::new(heap,circuit).to_circuit(&terms)?;
+    let mut checks = 0;
     let mut errors = 0;
     let mut warnings = 0;
 
     // Check conditions holds
-    for i in 0 .. checks {
-        match circuit.check(i) {
+    for outcome in circuit.check() {
+        match outcome {
             Outcome::Valid => { }
             Outcome::Unknown => {
                 warnings += 1;
@@ -101,6 +113,7 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
                 errors += 1;
             }
         }
+        checks += 1;
     }
     println!("Verified {} check(s): {} errors / {} warnings",checks,errors,warnings);
     Ok(true)

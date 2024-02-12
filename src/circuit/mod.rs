@@ -1,5 +1,7 @@
+mod smtlib;
 mod z3;
 
+pub use smtlib::*;
 pub use z3::*;
 
 pub enum Outcome {
@@ -49,6 +51,8 @@ pub trait Circuit {
     /// places a constraint on the circuit that the given condition
     /// holds.
     fn assert(&mut self, condition: Self::Bool);
+
+    fn check(&self) -> Vec<Outcome>;
 }
 
 pub trait Any : Clone {
