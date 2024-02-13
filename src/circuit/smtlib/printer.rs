@@ -56,23 +56,16 @@ impl<T:Write> SmtLibWriter<T> {
             Expr::Integer(i) => { write!(self.out,"{i}") }
             Expr::Boolean(b) => { write!(self.out,"{b}") }
             Expr::VarAccess(n) => { write!(self.out,"{n}") }
-            Expr::Nary(op,args) => self.write_nary(op,args),
-            Expr::Unary(op,arg) => self.write_unary(op,arg)
+            Expr::Operator(op,args) => self.write_nary(op,args)
         }
     }
 
-    fn write_nary(&mut self, op: &NaryOp, args: &[Expr]) -> Result<()> {
+    fn write_nary(&mut self, op: &Op, args: &[Expr]) -> Result<()> {
         write!(self.out,"({}",op.as_str())?;
         for arg in args {
             write!(self.out," ")?;
             self.write_expr(arg)?;
         }
-        write!(self.out,")")
-    }
-
-    fn write_unary(&mut self, op: &UnaryOp, arg: &Expr) -> Result<()> {
-        write!(self.out,"({} ",op.as_str())?;
-        self.write_expr(arg)?;
         write!(self.out,")")
     }
 }
