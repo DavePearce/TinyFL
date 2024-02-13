@@ -1,6 +1,6 @@
 /// Set of built-in operators
 #[derive(Clone,Copy,Debug,PartialEq)]
-pub enum NaryOp {
+pub enum Op {
     Eq,
     Neq,
     // Arithmetical
@@ -17,39 +17,40 @@ pub enum NaryOp {
     // Logical
     Or,
     And,
-    Implies
+    Implies,
+    Not,
+    // Other
+    IfThenElse
 }
 
-impl NaryOp {
-    pub fn as_str(&self) -> &str {
+impl Op {
+    /// Determine how many arguments are expected
+    pub fn arity(&self) -> usize {
         match self {
-            NaryOp::Eq => "=",
-            NaryOp::Neq => "!=",
-            NaryOp::Add => "+",
-            NaryOp::Sub => "-",
-            NaryOp::Mul => "*",
-            NaryOp::Div => "div",
-            NaryOp::Mod => "mod",
-            NaryOp::Gt => ">",
-            NaryOp::GtEq => ">=",
-            NaryOp::Lt => "<",
-            NaryOp::LtEq => "<=",
-            NaryOp::Or => "or",
-            NaryOp::And => "and",
-            NaryOp::Implies => "=>"
+            Op::IfThenElse => 3,
+            Op::Not => 1,
+            _ => usize::MAX
         }
     }
-}
-
-#[derive(Clone,Copy,Debug,PartialEq)]
-pub enum UnaryOp {
-    Not
-}
-
-impl UnaryOp {
+    /// Get the string representation of this operator.
     pub fn as_str(&self) -> &str {
         match self {
-            UnaryOp::Not => "not",
+            Op::Eq => "=",
+            Op::Neq => "!=",
+            Op::Add => "+",
+            Op::Sub => "-",
+            Op::Mul => "*",
+            Op::Div => "div",
+            Op::Mod => "mod",
+            Op::Gt => ">",
+            Op::GtEq => ">=",
+            Op::Lt => "<",
+            Op::LtEq => "<=",
+            Op::Or => "or",
+            Op::And => "and",
+            Op::Implies => "=>",
+            Op::Not => "not",
+            Op::IfThenElse => "ite"
         }
     }
 }
@@ -61,9 +62,7 @@ pub enum Expr {
     /// Boolean Literal
     Boolean(bool),
     /// Nary Expression
-    Nary(NaryOp,Vec<Expr>),
-    /// Unary Expression
-    Unary(UnaryOp,Box<Expr>),
+    Operator(Op,Vec<Expr>),
     /// Variable Access
     VarAccess(String)
 }
