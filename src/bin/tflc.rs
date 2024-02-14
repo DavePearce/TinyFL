@@ -1,9 +1,11 @@
 use std::error::Error;
 use std::{fs};
-use clap::{arg, Arg, ArgMatches, Command};
+use std::ffi::OsString;
+use std::path::PathBuf;
+use clap::{arg, Arg, ArgMatches, Command, value_parser};
 //
 use tiny_fl::{Parser,RustPrinter,SyntacticHeap,Verifier};
-use tiny_fl::circuit::{Circuit,Outcome,SmtLibCircuit};
+use tiny_fl::circuit::{Circuit,Outcome,SmtLibCircuit,SmtSolver};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command-line arguments
@@ -22,6 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Command::new("verify")
                 .about("Verify a given source file")
                 .arg(Arg::new("z3-static").long("z3-static"))
+                .arg(Arg::new("solver-path").long("solver-path").default_value("z3").value_parser(value_parser!(OsString)))
                 .arg(Arg::new("file").required(true))
                 .visible_alias("v")
         )
@@ -68,6 +71,7 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
     let filename = args.get_one::<String>("file").unwrap();
     // Check whether to use Z3 directly
     let z3_static = args.contains_id("z3-static");
+    let solver_path = args.get_one::<OsString>("solver-path").unwrap();
     // Read file
     let contents = fs::read_to_string(filename)?;
     let mut parser = Parser::new(&contents);
@@ -83,7 +87,11 @@ fn verify(args: &ArgMatches) -> Result<bool, Box<dyn Error>> {
         // Statically linked Z3 has been requested.
         z3_check(&parser.heap,&terms)
     } else {
-        let smtlib = SmtLibCircuit::new();
+        // Construcnt SmtSolver instance
+        let solver = SmtSolver::new(solver_path.as_ref());
+        // Construct SmtLib circuit
+        let smtlib = SmtLibCircuit::new(solver);
+        // Do it!
         check(&parser.heap,&terms,smtlib)
     }
 }

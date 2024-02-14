@@ -1,7 +1,7 @@
 use crate::circuit;
 use super::SmtLibWriter;
 use super::ast::*;
-use super::solver::SmtOutcome;
+use super::solver::{SmtOutcome,SmtSolver};
 
 use super::ast::Op::*;
 
@@ -9,14 +9,16 @@ use super::ast::Op::*;
 // SmtLib Circuit
 // =============================================================================
 
-pub struct SmtLibCircuit {
+pub struct SmtLibCircuit<'a> {
     /// Set of asserted verification conditions.
-    commands: Vec<Command>
+    commands: Vec<Command>,
+    /// Smt Solver to use for discharging commands.
+    solver: SmtSolver<'a>
 }
 
-impl SmtLibCircuit {
-    pub fn new() -> Self {
-        Self{commands: Vec::new()}
+impl<'a> SmtLibCircuit<'a> {
+    pub fn new(solver: SmtSolver<'a>) -> Self {
+        Self{commands: Vec::new(),solver}
     }
 
     pub fn discharge(&mut self, condition: Expr) {
@@ -25,7 +27,7 @@ impl SmtLibCircuit {
     }
 }
 
-impl circuit::Circuit for SmtLibCircuit {
+impl<'a> circuit::Circuit for SmtLibCircuit<'a> {
     type Term = Expr;
     type Bool = Expr;
     type Int = Expr;
@@ -70,7 +72,7 @@ impl circuit::Circuit for SmtLibCircuit {
     }
 
     fn check(&self) -> Vec<circuit::Outcome> {
-        let results = super::smtsolver_exec(&self.commands);
+        let results = self.solver.check(&self.commands);
         //
         results.iter().map(|o| {
             match o {
